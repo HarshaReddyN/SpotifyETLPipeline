@@ -1,44 +1,69 @@
 """
-This File acts as a Module for Calling API and Fetching Response
-"""
+# This File acts as a Module for Calling API and Fetching Response
+# """
+
 import requests
-import json
-from config.assets import get_assets
+from assets import get_assets
+from get_token import get_spotify_access_token
+import traceback
+import time
+import logging
 
+logging.basicConfig(format='%(asctime)s %(message)s')
+logger = logging.getLogger()
 
-class http_api():
-    """
-    This Class is Used to Fetch The Response from API
+class Api():
+    
+    
+    def __init__(self, URL: str, method: str, logger = None):
+        self.URL = URL
+        self.Method = method
+        self.CLIENTID = get_assets.CLIENT_ID.value
+        self.client_secret = get_assets.CLIENT_SECRET.value
+        self.last_token_request_time = 0
 
-    """
-    def __init__(self,URL:str,Method:str):
-        """
-        This Function is Used to Call the Provided API with Provided Method and return the Response of the API
-        @Param: URL : URL to call and get response from EX: (http://test.com)
-        @param: Method : Method to call the API with Ex: (GET, POST, PATCH, UPDATE)
-        @Output: Response as --> JSON 
-        """
-        self.URL = ''
-        self.Method = ''
-        self.client_id = ''
-        self.client_secret = ''
-        self.input_variables = {
-        "Accept" : "application/json",
-        "Content-Type" : "application/json",
-        "Authorization" : "Bearer {token}".format(token='')
-    }
-    def call_api(self):
-        """
-        This Function is Used to Call the Provided API with Provided Method and return the Response of the API
-        @Output: Response as --> JSON 
-         """
-        try:
-            request = requests.self.Method(
+        self.logger = logger
 
-                self.URL,headers = self.input_variables,
-            )
-            response = request.json()
-            return response
-        except Exception as VE:
-            raise SystemExit(f'There is a Exception raised while calling API, Proabable casue is some Value Error, For Detailed Information. please refer to Exception Details : {str(VE)}')
         
+    def refresh_token(self):
+        current_time = time.time()
+        if current_time - self.last_token_request_time > 3600:
+            self.access_token = get_spotify_access_token()
+            self.last_token_request_time = current_time
+        return self.access_token
+    
+    
+    def spotify_api(self):
+        access_token = self.refresh_token()
+        self.input_variables = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": "Bearer {token}".format(token=access_token)
+        }
+        try:
+            request = requests.request(
+                self.Method,
+                self.URL,
+                headers=self.input_variables,
+            )
+            time.sleep(0.01)
+
+            if request.status_code == 429:
+                retry_after = int(request.headers.get("Retry-After", 5))
+                self.logger.error (f"Rate limit exceeded. Retrying after {retry_after} seconds...")
+                time.sleep(retry_after)
+                return self.spotify_api() 
+            
+            if request.status_code == 200:
+                self.logger.info("Response is success.")
+                response = request.json()
+                return response
+            elif request.status_code == 401:
+                self.logger.error("Bad or expired token. This can happen if the user revoked a token or the access token has expired. You should re-authenticate the user.")
+            elif request.status_code == 403:
+                self.logger.error("Bad OAuth request (wrong consumer key, bad nonce, expired timestamp...). Unfortunately, re-authenticating the user won't help here.")
+            elif request.status_code == 500:
+                self.logger.error("The server encountered an unexpected condition that prevented it from fulfilling the request.")
+        except Exception as e:
+            traceback.print_exc()
+            raise SystemExit(f'There is an Exception: {e}')

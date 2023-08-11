@@ -1,0 +1,11 @@
+import logging
+... 
+
+logging.basicConfig(filename='FILENAME',encoding='utf-8',level=logging.INFO, filemode = 'w', format='%(process)d-%(levelname)s-%(message)s') 
+
+try:
+    logging.info('This will write in basic.log')
+    logging.warning('This will also write in basic.log') 
+    logging.debug('This will not write in basic.log')
+finally:
+    ""
