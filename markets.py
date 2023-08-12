@@ -2,6 +2,7 @@
 This File helps us to get all the markets available using the Spotify API
 """
 from http_api import Api
+import json
 
 
 class GetMarkets:
@@ -9,7 +10,7 @@ class GetMarkets:
     """
     This class helps us to fetch all the available markets on spotify 
     """
-    def __init__(self) -> None:
+    def __init__(self):
         self.url = 'https://api.spotify.com/v1/markets'
         
     def get_available_markets(self):
@@ -21,10 +22,13 @@ class GetMarkets:
         
         request = Api(URL=self.url, method='GET')
         response = request.spotify_api()
-        if 'error' in response:
-            print(f"Error accessing API: {response['error']}")
-        else:
-            return response['markets']
+        markets = json.loads(response.text)
+        out = markets['markets']
+        return out
+        # if 'error' in response:
+        #     print(f"Error accessing API: {response['error']}")
+        # else:
+        #     return response['markets']
             
 
 if __name__ == "__main__":

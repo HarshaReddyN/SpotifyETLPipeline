@@ -1,0 +1,4 @@
+libraries needed:
+pandas
+polars
+requests

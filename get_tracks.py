@@ -1,84 +1,63 @@
-from featuredplaylists import FeaturedPlayList
-from http_api import Api
+import featuredplaylists
+import http_api 
+from markets import GetMarkets
 import json
 import logging
+import polars as pl
+import collections
+import time
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger()
 
 class GetTracks:
-    def __init__(self, logger=None):
-        self.logger = logger
-        self.playlist_instance = FeaturedPlayList()
+    def __init__(self,playlist:pl.DataFrame):
+        self.playlist = playlist
+        
+        self.trackdetail = []
+        self.data  = collections.defaultdict(list)
 
-    def extract_all_tracks(self):
-        try:
-            data = self.playlist_instance.get_featured_playlists()
-            store_playlist_id = data.get("playlist_id", [])
+    def get_tracks_data(self):
+
+        api_list = [track[0] for track in self.playlist.select('track_api').rows()]
+        for api in api_list:
+            while api:
+                call_api = http_api.Api(URL=api, method='GET', logger='DEBUG')
+                response = call_api.spotify_api()
+                tracks_response = json.loads(response.text)
+                
+                self.trackdetail.append(tracks_response)
+                
+                if tracks_response['next']:
+                    api = tracks_response['next']
+                else:
+                    break
             
-            all_tracks = []
+        print(f'We received {len(self.trackdetail)} tracks responses')
+    def parse_tracks_data(self):
+        for tracks in self.trackdetail:
+            self.assign_data_to_dictionary(tracks)
+        return pl.DataFrame(self.data)
 
-            for playlist_id in store_playlist_id:
-                tracks = self.extract_tracks(playlist_id)
-                if tracks:
-                    all_tracks.extend(tracks)
-
-            return all_tracks
-
-        except Exception as exception:
-            self.logger.error(
-                f"There is an exception while working on function {self.__class__}. Here are the exception details: {str(exception)}"
-            )
-            raise SystemExit(str(exception)) from exception
-        
-    def extract_tracks(self, playlist_id):
-
-        """
-            This Function helps us to extract all the track info from the playlist
-            @param: playlist_id ex: 'a6a98sD5DS8D7y88'
-        """
-
-        all_tracks = []
-        url = f'https://api.spotify.com/v1/playlists/{playlist_id}/tracks'
-        
-        try:
-            while url:
-                request = Api(URL=url, method='GET', logger=self.logger)
-                response = request.spotify_api()
-
-                if response is None:
-                    self.logger.error(f"Error accessing API for playlist {playlist_id}. Response is None.")
-                    return None
-
-                tracks = response.get('items', [])
-                for track in tracks:
-                    track_info = track.get('track')
-                    if track_info:
-                        track_data = {
-                            "track_id": track_info.get('id'),
-                            "track_name": track_info.get('name'),
-                            "track_popularity": track_info.get('popularity'),
-                            "artists": [artist.get('name') for artist in track_info.get('artists', [])]
-                        }
-                        all_tracks.append(track_data)
-
-                url = response.get('next')
+    def assign_data_to_dictionary(self, tracks):
+        for track in tracks['items']:
             
-            return all_tracks
+            self.data["track_added_at"].append(track["added_at"])   
+            self.data['track_id'].append(track['track']['id'] if track['track'] != None else None)
+            self.data['track_name'].append(track['track']['name'] if track['track'] != None else None) 
+
+
+
         
-        except Exception as exception:
-            self.logger.error(
-                f"There is an exception while working on function {self.__class__}. Here are the exception details: {str(exception)}"
-            )
-            raise SystemExit(str(exception)) from exception
-
-
 if __name__ == "__main__":
-    tracks_instance = GetTracks(logger=logger)
-    tracks = tracks_instance.extract_all_tracks()
-    for index, track in enumerate(tracks, start=1):
-        print(f"{index}. {track.get('track_name')}")
-        print(f"   Track ID: {track['track_id']}")
-        print(f"   Popularity: {track['track_popularity']}")
-        print(f"   Artists: {', '.join(track['artists'])}")
-        print("\n")
+    print('Get Tracks Started')
+    start = time.perf_counter()
+    playlists_df = featuredplaylists.main()
+    print(f'Fetching Playlists Complete')
+    out = GetTracks(playlist=playlists_df)
+    out.get_tracks_data()
+    output = out.parse_tracks_data()
+    output.write_csv(file='data/tracks.csv',has_header=True)
+    end = time.perf_counter()
+    print(f'Total Time taken to process Featured Playlists is {(end-start)}')
+    print('Get Tracks is  Completed')

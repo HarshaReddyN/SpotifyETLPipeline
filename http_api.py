@@ -1,13 +1,12 @@
-"""
-# This File acts as a Module for Calling API and Fetching Response
-# """
-
 import requests
 from assets import get_assets
 from get_token import get_spotify_access_token
 import traceback
 import time
 import logging
+"""
+# This File acts as a Module for Calling API and Fetching Response
+# """
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 logger = logging.getLogger()
@@ -26,11 +25,12 @@ class Api():
 
         
     def refresh_token(self):
-        current_time = time.time()
-        if current_time - self.last_token_request_time > 3600:
-            self.access_token = get_spotify_access_token()
-            self.last_token_request_time = current_time
-        return self.access_token
+        # current_time = time.time()
+        # if current_time - self.last_token_request_time > 3600:
+        #     self.access_token = get_spotify_access_token()
+        #     self.last_token_request_time = current_time
+        # return self.access_token
+        return get_spotify_access_token()
     
     
     def spotify_api(self):
@@ -46,18 +46,19 @@ class Api():
                 self.URL,
                 headers=self.input_variables,
             )
-            time.sleep(0.01)
+            #time.sleep(0.01)
 
-            if request.status_code == 429:
+            if request.status_code == 200:
+                response = request.json()
+                return request
+            
+            elif request.status_code == 429:
                 retry_after = int(request.headers.get("Retry-After", 5))
                 self.logger.error (f"Rate limit exceeded. Retrying after {retry_after} seconds...")
                 time.sleep(retry_after)
                 return self.spotify_api() 
             
-            if request.status_code == 200:
-                self.logger.info("Response is success.")
-                response = request.json()
-                return response
+            
             elif request.status_code == 401:
                 self.logger.error("Bad or expired token. This can happen if the user revoked a token or the access token has expired. You should re-authenticate the user.")
             elif request.status_code == 403:

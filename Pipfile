@@ -9,6 +9,7 @@ polars = "*"
 requests = "*"
 pyspark = "*"
 asyncio = "*"
+tqdm = "*"
 
 [dev-packages]
 

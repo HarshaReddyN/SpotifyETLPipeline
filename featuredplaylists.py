@@ -1,81 +1,76 @@
+"""
+This Module is used to Get the Featued Playlists from Spotify
+@Input:  
+Classes : FeateuredP
+"""
 from http_api import Api
 from markets import GetMarkets
 import polars as pl
 import collections
-import logging
+import time
+import json
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger()
+
 
 class FeaturedPlayList:
-
     """
-        This class helps us to fetch all the featured playlists based on the specific market on spotify 
-
+        This class helps us to fetch all the featured playlists based on the specific market on spotify
     """
 
-    def __init__(self, logger=None):
-        self.logger = logger
-        call_markets_instance = GetMarkets()
-        self.markets = call_markets_instance.get_available_markets()
+    def __init__(self, countries:list):
+        self.countries = countries
+        self.featured_playlist_response = []
+        self.data = collections.defaultdict(list)
 
-    def get_featured_playlists(self):
+    def get_featured_playlist_data(self):
 
-        """
-            This Function helps us to retrieve featured playlists from the market
+        for country in self.countries:
+            #print(f'Fetching Playlist for Country {country}')
+            url = f'https://api.spotify.com/v1/browse/featured-playlists?country={country}'
+            call_api = Api(URL=url,method='GET',logger='DEBUG')
+            response = call_api.spotify_api()
+            self.featured_playlist_response.append(json.loads(response.text))
+            #print(f'Fetching Playlist for Country {country} Completed, Resulted with {json.loads(response.text)["playlists"]["total"]} No of Playlists')
 
-        """
-
-        data = collections.defaultdict(list)
-
-        for country_code in self.markets:
-            url = f'https://api.spotify.com/v1/browse/featured-playlists?country={country_code}'
-            request = Api(URL=url, method='GET', logger=self.logger)
-            response = request.spotify_api()
-
-            if response is None:
-                self.logger.error(f"Error accessing API for market {country_code}. Response is None.")
-                
-
-            self.assign_data_to_dictionary(data, response, country_code)
-
-        return data
-
-    def assign_data_to_dictionary(self, data, response, country_code):
-
+    def assign_data_to_dictionary(self, playlists):
         """
             This function helps us to assign the items to assign items to a dictionar from the features playlist response
-
         """
-
-        playlists = response.get('playlists', {}).get('items', [])
-
-        for playlist in playlists:
-            data["message"].append(response.get("message"))
-            data["country_code"].append(country_code)
-            data["playlist_name"].append(playlist.get("name"))
-            data["playlist_description"].append(playlist.get("description"))
-            data["playlist_id"].append(playlist.get("id"))
-            data["playlist_url"].append(playlist.get("external_urls", {}).get("spotify"))
-            data["playlist_owner"].append(playlist.get("owner", {}).get("display_name"))
-            data["playlist_tracks"].append(playlist.get("tracks", {}).get("total"))
+        for playlist in playlists['playlists']['items']:
+            #self.data["country_code"].append(country)
+            self.data["message"].append(playlists["message"])
+            self.data["playlist_name"].append(playlist["name"])
+            self.data["playlist_description"].append(playlist["description"])
+            self.data["playlist_id"].append(playlist["id"])
+            self.data["playlist_url"].append(playlist["external_urls"]["spotify"])
+            self.data["playlist_owner"].append(playlist["owner"]["display_name"])
+            self.data["track_api"].append(playlist["tracks"]["href"])
+            self.data["tracks_total"].append(playlist["tracks"]["total"])
 
     def parse_featured_playlists(self):
+        
+        for playlist in self.featured_playlist_response:
+            self.assign_data_to_dictionary(playlists=playlist)
+        
+        pl.DataFrame(self.data).write_csv(file='playlist.csv',has_header=True)
+        return pl.DataFrame(self.data)
+   
 
-        """
-            This funciton helps us to parse the data into a dataframe
-        """
-
-        try:
-            data = self.get_featured_playlists()  # Call the method to get data
-            return pl.DataFrame(data)
-        except Exception as exception:
-            self.logger.error(
-                f"There is an exception while working on function {self.__class__}. Here are the exception details: {str(exception)}"
-            )
-            raise SystemExit(str(exception))
+def main():
+    print('Get Featured Playlist started')
+    call_markets_instance = GetMarkets()
+    markets = call_markets_instance.get_available_markets() 
+    call_featured_playlist = FeaturedPlayList(countries=markets)
+    call_featured_playlist.get_featured_playlist_data()
+    return call_featured_playlist.parse_featured_playlists()
+    print('Get Featured Playlist Completed')
+    
+    
 
 if __name__ == "__main__":
-    feature_instance = FeaturedPlayList(logger=logger)
-    fp = feature_instance.parse_featured_playlists()
-    print(fp)
+    start = time.perf_counter()
+    
+    main()
+    end = time.perf_counter()
+    print(f'Total Time taken to process Featured Playlists is {(end-start)}')
+    

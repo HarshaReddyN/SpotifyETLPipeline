@@ -20,6 +20,7 @@ def get_spotify_access_token(logger=None):
         response = requests.post(url=url, headers=headers, data=data)
         if response.status_code == 200:
             return response.json()['access_token']
+
         else:
             logger.error(f"Failed to generate Spotify token. Status Code: {response.status_code}")
             return None
