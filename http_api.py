@@ -4,11 +4,24 @@ from get_token import get_spotify_access_token
 import traceback
 import time
 import logging
+
+from requests.adapters import HTTPAdapter
+
 """
 # This File acts as a Module for Calling API and Fetching Response
 # """
+retry_strategy = requests.packages.urllib3.util.retry.Retry(
+    total=10,
+    backoff_factor=1,
+    status_forcelist=[429, 500, 502, 503, 504],
 
-logging.basicConfig(format='%(asctime)s %(message)s')
+)
+
+adapter = HTTPAdapter(max_retries=retry_strategy)
+http = requests.Session()
+http.mount("https://", adapter)
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger()
 
 class Api():
@@ -20,7 +33,6 @@ class Api():
         self.CLIENTID = get_assets.CLIENT_ID.value
         self.client_secret = get_assets.CLIENT_SECRET.value
         self.last_token_request_time = 0
-
         self.logger = logger
 
         
@@ -41,29 +53,28 @@ class Api():
             "Authorization": "Bearer {token}".format(token=access_token)
         }
         try:
-            request = requests.request(
+            response = requests.request(
                 self.Method,
                 self.URL,
                 headers=self.input_variables,
             )
-            #time.sleep(0.01)
+            time.sleep(0.05)
 
-            if request.status_code == 200:
-                response = request.json()
-                return request
+            if response.status_code == 200:
+                return response
             
-            elif request.status_code == 429:
-                retry_after = int(request.headers.get("Retry-After", 5))
-                self.logger.error (f"Rate limit exceeded. Retrying after {retry_after} seconds...")
+            elif response.status_code == 429:
+                retry_after = int(response.headers.get("Retry-After", 5))
+                self.logger.error(f"Rate limit exceeded. Retrying after {retry_after} seconds...")
                 time.sleep(retry_after)
-                return self.spotify_api() 
+                return self.spotify_api()
             
             
-            elif request.status_code == 401:
-                self.logger.error("Bad or expired token. This can happen if the user revoked a token or the access token has expired. You should re-authenticate the user.")
-            elif request.status_code == 403:
+            elif response.status_code == 401:
+                 self.logger.error("Bad or expired token. This can happen if the user revoked a token or the access token has expired. You should re-authenticate the user.")
+            elif response.status_code == 403:
                 self.logger.error("Bad OAuth request (wrong consumer key, bad nonce, expired timestamp...). Unfortunately, re-authenticating the user won't help here.")
-            elif request.status_code == 500:
+            elif response.status_code == 500:
                 self.logger.error("The server encountered an unexpected condition that prevented it from fulfilling the request.")
         except Exception as e:
             traceback.print_exc()

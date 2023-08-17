@@ -10,7 +10,4 @@ class main():
         pass
 
 
-    def fp_to_csv():
 
-        df = FeaturedPlayList.parse_featured_playlists()
-        convert_fp = Fileconvertor.df_to_csv(df)

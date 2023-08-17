@@ -10,6 +10,9 @@ requests = "*"
 pyspark = "*"
 asyncio = "*"
 tqdm = "*"
+sqlalchemy = "*"
+sqlalchemy-utils = "*"
+psycopg2 = "*"
 
 [dev-packages]
 
