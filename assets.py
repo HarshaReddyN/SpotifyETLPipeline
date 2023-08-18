@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class get_assets(Enum):
+class GetAssets(Enum):
     """
     This Class is used to get the Assets.
     @format : get_assets.{KEY}.value

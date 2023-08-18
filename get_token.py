@@ -9,6 +9,10 @@ logger = logging.getLogger()
 url = 'https://accounts.spotify.com/api/token'
 
 def get_spotify_access_token(logger=None):
+
+    """
+        This function creates a token to access the Web API
+    """
     try:
         credentials = f"{get_assets.CLIENT_ID.value}:{get_assets.CLIENT_SECRET.value}"
         encoded_credentials = base64.b64encode(credentials.encode()).decode()

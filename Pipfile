@@ -13,6 +13,7 @@ tqdm = "*"
 sqlalchemy = "*"
 sqlalchemy-utils = "*"
 psycopg2 = "*"
+pylint = "*"
 
 [dev-packages]
 
