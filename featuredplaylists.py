@@ -3,10 +3,11 @@ import json
 import logging
 import time
 
-import polars as pl
+import pandas as pd
 
 from http_api import Api
 from markets import GetMarkets
+import database_connection
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger()
@@ -75,8 +76,8 @@ class FeaturedPlayList:
         try:
             for playlist in self.featured_playlist_response:
                 self.assign_data_to_dictionary(playlists=playlist)
-            df = pl.DataFrame(self.data)
-            df.write_csv(file='playlist.csv', has_header=True)
+            df = pd.DataFrame(self.data)
+            df.to_sql(name='featured_playlists', con= database_connection.main(), if_exists='append', index=False, schema='extracted_data')
             return df
         except Exception as e:
             logger.error(f'Error while parsing playlists: {e}')

@@ -17,7 +17,7 @@ class DatabaseConnection:
     """
     def __init__(self,) -> None:
         pass
-    def conncet_to_database(self,database_host : str,port: str,user:str,password:str,database_name:str):
+    def connect_to_database(self,database_host : str,port: str,user:str,password:str,database_name:str):
         """
         Function Connect to Database will be connecting to PostgreSQL
         @param: Database Host : str

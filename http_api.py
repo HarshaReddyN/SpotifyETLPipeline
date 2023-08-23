@@ -21,8 +21,7 @@ adapter = HTTPAdapter(max_retries=retry_strategy)
 http = requests.Session()
 http.mount("https://", adapter)
 
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger()
 
 
@@ -79,11 +78,16 @@ class Api():
             "Authorization": "Bearer {token}".format(token=access_token)
         }
         try:
-            response = http.request(
-                self.Method,
-                self.URL,
-                headers=self.input_variables,
-            )
+            ssl_context = ssl.create_default_context()
+            ssl_context.options |= ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1 # not use TLSv1 and TLSv1_1
+            ssl_context.set_ciphers('HIGH:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH') 
+            if self.Method == "GET":
+                response = http.get(
+                    self.URL,
+                    timeout= self.timeout,
+                    headers=self.input_variables,
+                   
+                )
 
             if response.status_code == 200:
                 return response

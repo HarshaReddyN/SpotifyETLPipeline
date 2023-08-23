@@ -1,7 +1,11 @@
-import requests
 import base64
-from assets import get_assets
+import datetime
 import logging
+import json
+
+import requests
+
+from assets import GetAssets
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger()
@@ -14,7 +18,7 @@ def get_spotify_access_token(logger=None):
         This function creates a token to access the Web API
     """
     try:
-        credentials = f"{get_assets.CLIENT_ID.value}:{get_assets.CLIENT_SECRET.value}"
+        credentials = f"{GetAssets.CLIENT_ID.value}:{GetAssets.CLIENT_SECRET.value}"
         encoded_credentials = base64.b64encode(credentials.encode()).decode()
         headers = {
             'Authorization': f'Basic {encoded_credentials}',
@@ -25,17 +29,18 @@ def get_spotify_access_token(logger=None):
         response = requests.post(url=url, headers=headers, data=data)
         
         if response.status_code == 200:
-            return response.json()['access_token']
+            token_dict = {}
+            token_dict['access_token'] = response.json()['access_token']
+            token_dict['generated_at'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+
+            with open('api_token.json', 'w') as outfile:
+                json.dump(token_dict, outfile)
+            return token_dict['access_token']
+
         else:
-            if logger:
-                logger.error(f"Failed to generate Spotify token. Status Code: {response.status_code}")
-            else:
-                print(f"Failed to generate Spotify token. Status Code: {response.status_code}")
-            return None
+            logger.error(f"Failed to generate Spotify token. Status Code: {response.status_code}")
+            raise Exception
     except Exception as exception:
-        if logger:
-            logger.error(f"There is an exception while retrieving Spotify token: {str(exception)}")
-        else:
-            print(f"There is an exception while retrieving Spotify token: {str(exception)}")
+        logger.error(f"There is an exception while retrieving Spotify token: {str(exception)}")
         return None
 
