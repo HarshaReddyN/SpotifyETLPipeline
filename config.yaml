@@ -1,0 +1,50 @@
+spotify:
+  client_id: "${SPOTIFY_CLIENT_ID}"
+  client_secret: "${SPOTIFY_CLIENT_SECRET}"
+  token_url: "https://accounts.spotify.com/api/token"
+  base_url: "https://api.spotify.com/v1"
+  markets:
+    - US
+    - GB
+    - IN
+    - DE
+    - FR
+    - JP
+    - BR
+    - AU
+    - CA
+    - MX
+    - NG
+    - ZA
+    - AR
+    - KR
+    - SE
+    - NL
+    - IT
+    - ES
+    - PL
+    - SG
+  request_delay_seconds: 0.25
+  max_retries: 3
+  backoff_factor: 2
+
+redshift:
+  host: "${REDSHIFT_HOST}"
+  port: 5439
+  dbname: "${REDSHIFT_DBNAME}"
+  user: "${REDSHIFT_USER}"
+  password: "${REDSHIFT_PASSWORD}"
+  schema: "spotify_etl"
+  tables:
+    playlists: "featured_playlists"
+    tracks: "playlist_tracks"
+    artists: "track_artists"
+
+pipeline:
+  log_level: "INFO"
+  log_dir: "logs"
+  data_dir: "data"
+  raw_subdir: "raw"
+  transformed_subdir: "transformed"
+  batch_size: 50
+  schedule_cron: "0 6 * * *"

@@ -1,4 +1,8 @@
-libraries needed:
-pandas
-polars
-requests
+# Spotify ETL Pipeline — Python 3.11+
+requests>=2.31.0
+pyyaml>=6.0.1
+pandas>=2.2.0
+pyarrow>=15.0.0          # parquet support
+psycopg2-binary>=2.9.9   # Redshift (Postgres-compatible)
+apscheduler>=3.10.4      # daily scheduler in app.py
+python-dotenv>=1.0.1     # optional: load .env for local dev
